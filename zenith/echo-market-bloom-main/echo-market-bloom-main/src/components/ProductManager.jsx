@@ -121,7 +121,7 @@ const ProductManager = () => {
             <div key={product.id} className="border p-4 rounded">
               {product.image && (
                 <img
-                  src={product.image}
+                  src={product.image || product.imageUrl}
                   alt={product.name}
                   className="w-full h-48 object-cover mb-2"
                 />

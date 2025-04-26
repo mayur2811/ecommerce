@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
-import { ArrowRight, ArrowLeft, ShoppingCart, Heart, Eye, Clock } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ShoppingCart, Heart, Eye, Clock, RefreshCw } from 'lucide-react';
+import { flashSaleProducts } from '../data/flashsales';
 
 const Home = () => {
   const { products, categories } = useProducts();
@@ -15,33 +15,52 @@ const Home = () => {
     minutes: 19,
     seconds: 56,
   });
+  const [currentFlashSaleIndex, setCurrentFlashSaleIndex] = useState(0);
   
   // Featured products for different sections
   const newArrivals = products.slice(0, 4);
   const bestSelling = [...products].sort((a, b) => b.rating - a.rating).slice(0, 4);
-  const flashSaleProducts = products.slice(0, 5).map(product => ({
-    ...product,
-    discountPercent: Math.floor(((product.price - product.discountPrice) / product.price) * 100)
-  }));
+  
+  // Get current 5 flash sale products
+  const getCurrentFlashSaleProducts = () => {
+    const startIndex = currentFlashSaleIndex;
+    const endIndex = Math.min(startIndex + 5, flashSaleProducts.length);
+    let products = flashSaleProducts.slice(startIndex, endIndex);
+    
+    // If we don't have enough products to fill 5, wrap around to the beginning
+    if (products.length < 5) {
+      const remaining = 5 - products.length;
+      products = [...products, ...flashSaleProducts.slice(0, remaining)];
+    }
+    
+    return products;
+  };
+
+  const handleRefreshFlashSales = () => {
+    setCurrentFlashSaleIndex((prev) => {
+      const nextIndex = prev + 5;
+      return nextIndex >= flashSaleProducts.length ? 0 : nextIndex;
+    });
+  };
   
   // Banners for carousel
   const banners = [
     {
       title: "Up to 10% off Voucher",
       description: "Shop our latest electronics and get special discounts.",
-      image: "https://source.unsplash.com/random/800x400/?electronics",
+      image: "https://images.unsplash.com/photo-1707485122968-56916bd2c464?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       category: "Electronics"
     },
     {
       title: "Enhance Your Music Experience",
       description: "High-quality audio equipment for true audiophiles.",
-      image: "https://source.unsplash.com/random/800x400/?headphones",
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       category: "Audio"
     },
     {
       title: "Summer Fashion Collection",
       description: "Discover the latest trends for the hot season.",
-      image: "https://source.unsplash.com/random/800x400/?summer-fashion",
+      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       category: "Fashion"
     }
   ];
@@ -96,6 +115,8 @@ const Home = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+
+  const fixedProducts = products.map(p => ({ ...p, image: p.imageUrl }));
 
   return (
     <div>
@@ -186,8 +207,17 @@ const Home = () => {
               <h2 className="text-2xl font-semibold">Flash Sales</h2>
             </div>
             
-            {/* Countdown timer */}
             <div className="flex items-center space-x-4">
+              {/* Refresh button */}
+              <button 
+                onClick={handleRefreshFlashSales}
+                className="flex items-center space-x-2 bg-exclusive-red text-white px-4 py-2 rounded hover:bg-exclusive-darkRed transition-colors"
+              >
+                <RefreshCw size={20} />
+                <span>Refresh Deals</span>
+              </button>
+              
+              {/* Countdown timer */}
               <div className="flex items-center space-x-2">
                 <div className="text-center">
                   <div className="bg-exclusive-darkGray text-white px-3 py-1 rounded">
@@ -222,17 +252,17 @@ const Home = () => {
           
           {/* Flash sale products */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {flashSaleProducts.map((product) => (
+            {getCurrentFlashSaleProducts().map((product) => (
               <div key={product.id} className="group border rounded-lg overflow-hidden">
                 <div className="relative pt-[100%] bg-gray-100">
                   {/* Discount badge */}
                   <div className="absolute top-3 left-3 bg-exclusive-red text-white text-xs px-2 py-1 rounded">
-                    -{product.discountPercent}%
+                    -{product.discount}%
                   </div>
                   
                   {/* Product image */}
                   <img 
-                    src={product.imageUrl} 
+                    src={product.imageurl} 
                     alt={product.name} 
                     className="absolute inset-0 w-full h-full object-contain p-4"
                   />
@@ -268,8 +298,8 @@ const Home = () => {
                     </Link>
                   </h3>
                   <div className="flex items-center space-x-2">
-                    <span className="text-exclusive-red font-semibold">${product.discountPrice.toFixed(2)}</span>
-                    <span className="text-gray-500 line-through text-sm">${product.price.toFixed(2)}</span>
+                    <span className="text-exclusive-red font-semibold">${product.price.toFixed(2)}</span>
+                    <span className="text-gray-500 line-through text-sm">${product.originalPrice.toFixed(2)}</span>
                   </div>
                   
                   {/* Rating */}
@@ -279,7 +309,6 @@ const Home = () => {
                         ★
                       </span>
                     ))}
-                    <span className="text-xs text-gray-500 ml-2">({product.reviews.length})</span>
                   </div>
                 </div>
               </div>
